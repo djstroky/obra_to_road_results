@@ -52,3 +52,12 @@ docs/_build/
 
 # PyBuilder
 target/
+
+#virtualenv (windows)
+/Include
+/Lib
+/Scripts
+
+#eclipse
+.project
+.pydevproject
