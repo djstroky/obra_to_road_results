@@ -61,3 +61,6 @@ target/
 #eclipse
 .project
 .pydevproject
+
+#project-level-exclusions
+obra_to_road_results/data

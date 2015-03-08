@@ -4,7 +4,10 @@ A bunch of scripts to download a list of OBRA events
 from bs4 import BeautifulSoup
 from datetime import date, datetime
 
+import json
+import os
 import requests
+import sys
 import time
 
 
@@ -34,7 +37,15 @@ def download():
 
 				time.sleep(0.5)
 
-	print(all_race_data)
+	data_dir = os.path.join(os.path.split(__file__)[0], 'data')
+	event_json_filename = os.path.join(data_dir, 'events.json')
+	if not os.path.exists(data_dir):
+		os.makedirs(data_dir)
+	
+	event_file = open(event_json_filename, 'w')
+	event_file.write(json.dumps(all_race_data))
+	event_file.close()
+	
 
 def parse_2006_to_present_list(year, discipline, resp):
 	"""parese the response
@@ -49,8 +60,9 @@ def parse_2006_to_present_list(year, discipline, resp):
 	
 	text = resp.text.replace('&copy;', '(c)')
 
-	result_soup = BeautifulSoup(text)
-
+	#new OBRA website has too many </tr> tags, use html5lib to take care of that
+	result_soup = BeautifulSoup(text, 'html5lib')
+	
 	#only targeting main section.  Weekly Series are not important IMHO
 	target_section = result_soup.find(class_='col-sm-6')
 	
@@ -66,8 +78,8 @@ def parse_2006_to_present_list(year, discipline, resp):
 		race_date_dt = datetime.strptime(race_date_str, '%m/%d')
 		race_date_dt = datetime(year, race_date_dt.month, race_date_dt.day)
 		races.append(dict(date=race_date_dt.strftime('%Y-%m-%d'),
-						  link=tds[1].a.href,
-						  name=tds[1].string,
+						  link=tds[1].a['href'],
+						  name=tds[1].a.string,
 						  discipline=discipline))
 	
 	return races

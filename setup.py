@@ -5,7 +5,8 @@ setup(
     packages=find_packages(),
     install_requires=[
     	'requests>=2.5.3',
-    	'beautifulsoup4>=4.3'
+    	'beautifulsoup4>=4.3',
+        'html5lib>=0.999'
     ],
     entry_points = {
         'console_scripts': [
