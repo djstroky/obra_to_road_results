@@ -11,6 +11,7 @@ setup(
     entry_points = {
         'console_scripts': [
             'dl_event_list=obra_to_road_results.event_list:download',
+            'dl_event_data=obra_to_road_results.event_data:download_all'
         ]
     }
 )
