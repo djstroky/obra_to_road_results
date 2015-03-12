@@ -62,5 +62,9 @@ def download_event(event_url, event_data):
     event_data['event_data_hash'] = event_hash
     event_soup = BeautifulSoup(text)
     
+    event_info = event_soup.find(class_='row event_info')
+    event_city = event_info.contents[0].strip()
+    
+    print(event_city)
     sys.exit()
     
