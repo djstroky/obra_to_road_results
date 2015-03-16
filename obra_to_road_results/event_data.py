@@ -10,7 +10,12 @@ import hashlib
 import json
 import os
 import requests
-import sys
+import time
+
+
+data_dir = os.path.join(os.path.split(__file__)[0], 'data')
+
+stop_after = 10
 
 
 def download_all():
@@ -20,7 +25,6 @@ def download_all():
     2. outputs list of events that were downloaded to csv
     """
     
-    data_dir = os.path.join(os.path.split(__file__)[0], 'data')
     event_json_filename = os.path.join(data_dir, 'events.json')
     
     with open(event_json_filename) as f:
@@ -28,8 +32,12 @@ def download_all():
         
     downloaded_events = ['name', 'date', 'discipline', 'city', 'filename']
     
+    num_processed = 0
+    
     for event_url in all_events:
         event_data = all_events[event_url]
+        print(event_data['date'] + '_' + event_data['name'])
+        
         event_dt = datetime.strptime(event_data['date'], '%Y-%m-%d')
         
         if event_dt.year > 2005:
@@ -40,14 +48,21 @@ def download_all():
                                           event_data['discipline'],
                                           city,
                                           downloaded_output_filename])
+            
+            time.sleep(1)
+            
         else:
             # the pre-2006 event formats are all a crapshoot, no standardization whatsoever
             pass
         
+        num_processed += 1
+        if num_processed == stop_after:
+            break
+        
     with open(event_json_filename, 'w') as f:
         f.write(json.dumps(all_events))
         
-    with open(os.path.join(data_dir, 'downloaded_events.csv'), 'w') as f:
+    with open(os.path.join(data_dir, 'downloaded_events.csv'), 'w',  newline='') as f:
         wrtr = csv.writer(f)
         wrtr.writerows(downloaded_events)
             
@@ -65,6 +80,51 @@ def download_event(event_url, event_data):
     event_info = event_soup.find(class_='row event_info')
     event_city = event_info.contents[0].strip()
     
-    print(event_city)
-    sys.exit()
+    output_rows = [['Place', 'Name', 'Team']]
+    
+    for item in event_soup.find_all(['h3', 'table']):
+        if item.name == 'h3':
+            output_rows.append([item.string])
+        elif 'event_races' not in item['class']:
+            time_pos = False
+            
+            for th in item.find_all('th'):
+                if 'time' in th['class']:
+                    if len(output_rows[0]) == 3:
+                        output_rows[0].append('Time')
+                        time_pos = True
+                
+            for tr in item.find_all('tr'):
+                row = ['', '' ,'']
+                if time_pos:
+                    row.append('')
+                    
+                for td in tr.find_all('td'):
+                    try:
+                        if 'place' in td['class']:
+                            row[0] = td.string
+                        elif 'name' in td['class']:
+                            row[1] = td.string
+                        elif 'team_name' in td['class']:
+                            row[2] = td.string
+                        elif 'time' in td['class']:
+                            row[3] = td.string
+                    except Exception as e:
+                        print(row)
+                        raise e
+                        
+                if len(tr.find_all('td')) > 0:
+                    output_rows.append(row)
+                     
+    event_data_dir = os.path.join(data_dir, 'event_data')
+    if not os.path.exists(event_data_dir):
+        os.mkdir(event_data_dir)
+        
+    output_filename = event_data['date'] + '_' + event_data['name'] + '.csv'
+        
+    with open(os.path.join(event_data_dir, output_filename), 'w',  newline='') as f:
+        wrtr = csv.writer(f)
+        wrtr.writerows(output_rows) 
+    
+    return output_filename, event_city
     
