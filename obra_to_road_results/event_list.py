@@ -30,7 +30,7 @@ def download():
 	else:
 		all_race_data = dict()
 	
-	for year in range(2001, today.year + 1): 
+	for year in range(2006, today.year + 1): 
 		if year < 2006:
 			# pre-2006 result format
 			
@@ -75,14 +75,17 @@ def parse_2006_to_present_list(year, discipline, resp, all_race_data):
 	# only targeting main section.  Weekly Series are not important IMHO
 	target_section = result_soup.find(class_='col-sm-6')
 	
-	for race in target_section.find_all('tr'):
-		tds = race.find_all('td')
+	last_multi_day_name = 'Unknown Multi-day Race'
+	
+	for race_tr in target_section.find_all('tr'):
+		tds = race_tr.find_all('td')
 		if len(tds) < 2:
 			# new year, likely a single row with a single td saying "None"
 			continue
 		
 		if tds[0].string.find('-') > -1:
-			# multi-day GC, continue to next
+			# multi-day GC, capture name, continue to next
+			last_multi_day_name = tds[1].a.string
 			continue
 		
 		race_date_str = tds[0].string.strip()
@@ -90,10 +93,15 @@ def parse_2006_to_present_list(year, discipline, resp, all_race_data):
 		race_date_dt = datetime(year, race_date_dt.month, race_date_dt.day)
 		race_link = tds[1].a['href']
 		race_link = 'http://obra.org{0}'.format(race_link)
+		race_name = tds[1].a.string
+		
+		if race_tr.has_attr('class') and 'multi-day-event-child' in race_tr['class']:
+			if race_name.find(last_multi_day_name) == -1:
+				race_name = last_multi_day_name + ' - ' + race_name
 		
 		if race_link not in all_race_data:
 			all_race_data[race_link] = dict(date=race_date_dt.strftime('%Y-%m-%d'),
-											name=tds[1].a.string,
+											name=race_name,
 											discipline=discipline)
 
 

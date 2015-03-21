@@ -15,7 +15,7 @@ import time
 
 data_dir = os.path.join(os.path.split(__file__)[0], 'data')
 
-stop_after = 10
+stop_after = 3
 
 
 def download_all():
@@ -30,13 +30,12 @@ def download_all():
     with open(event_json_filename) as f:
         all_events = json.loads(f.read())
         
-    downloaded_events = ['name', 'date', 'discipline', 'city', 'filename']
+    downloaded_events = [['name', 'date', 'discipline', 'city', 'filename']]
     
     num_processed = 0
     
     for event_url in all_events:
         event_data = all_events[event_url]
-        print(event_data['date'] + '_' + event_data['name'])
         
         event_dt = datetime.strptime(event_data['date'], '%Y-%m-%d')
         
@@ -48,6 +47,7 @@ def download_all():
                                           event_data['discipline'],
                                           city,
                                           downloaded_output_filename])
+                print(event_data['date'] + '_' + event_data['name'])
             
             time.sleep(1)
             
@@ -72,7 +72,7 @@ def download_event(event_url, event_data):
     text = resp.text.replace('&copy;', '(c)')
     event_hash = hashlib.sha1(text.encode('utf-8')).hexdigest()
     if 'event_data_hash' in event_data and event_data['event_data_hash'] == event_hash:
-        return False
+        return False, None
         
     event_data['event_data_hash'] = event_hash
     event_soup = BeautifulSoup(text)
@@ -84,15 +84,16 @@ def download_event(event_url, event_data):
     
     for item in event_soup.find_all(['h3', 'table']):
         if item.name == 'h3':
+            output_rows.append([])
             output_rows.append([item.string])
         elif 'event_races' not in item['class']:
             time_pos = False
             
             for th in item.find_all('th'):
                 if 'time' in th['class']:
+                    time_pos = True
                     if len(output_rows[0]) == 3:
                         output_rows[0].append('Time')
-                        time_pos = True
                 
             for tr in item.find_all('tr'):
                 row = ['', '' ,'']
@@ -120,8 +121,11 @@ def download_event(event_url, event_data):
     if not os.path.exists(event_data_dir):
         os.mkdir(event_data_dir)
         
-    output_filename = event_data['date'] + '_' + event_data['name'] + '.csv'
+    output_filename = event_data['date'] + '_' + event_data['name'].replace('/', '-').replace('\\', '-') + '.csv'
         
+    if len(output_rows) < 2:
+        return False, None
+    
     with open(os.path.join(event_data_dir, output_filename), 'w',  newline='') as f:
         wrtr = csv.writer(f)
         wrtr.writerows(output_rows) 
