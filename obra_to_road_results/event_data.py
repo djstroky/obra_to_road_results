@@ -15,8 +15,14 @@ import time
 
 data_dir = os.path.join(os.path.split(__file__)[0], 'data')
 
-stop_after = 3
+stop_after = 99999
 
+def strip_file_chars(s):
+    return s.replace('/', '-').replace('\\', '-').replace(':', ' - ')
+
+
+def strip_bad_utf8_chars(s):
+    return s.replace('&copy;', '(c)').replace('\u2019', "'").replace('\u2014', '-')
 
 def download_all():
     """
@@ -30,7 +36,16 @@ def download_all():
     with open(event_json_filename) as f:
         all_events = json.loads(f.read())
         
-    downloaded_events = [['name', 'date', 'discipline', 'city', 'filename']]
+    processed_files = []
+    event_data_dir = os.path.join(data_dir, 'event_data')
+    if not os.path.exists(event_data_dir):
+        os.mkdir(event_data_dir)
+        
+    for f in os.listdir(event_data_dir):
+        race, ext = os.path.splitext(f)
+        processed_files.append(strip_bad_utf8_chars(strip_file_chars(race)))
+        
+    downloaded_events = [['name', 'date', 'discipline', 'city', 'filename', 'event_exists_on_road_results']]
     
     num_processed = 0
     
@@ -38,6 +53,9 @@ def download_all():
         event_data = all_events[event_url]
         
         event_dt = datetime.strptime(event_data['date'], '%Y-%m-%d')
+        race_name = strip_bad_utf8_chars(strip_file_chars(event_data['date'] + '_' + event_data['name']))
+        if race_name in processed_files:
+            continue
         
         if event_dt.year > 2005:
             downloaded_output_filename, city = download_event(event_url, event_data)
@@ -47,7 +65,7 @@ def download_all():
                                           event_data['discipline'],
                                           city,
                                           downloaded_output_filename])
-                print(event_data['date'] + '_' + event_data['name'])
+                print(race_name)
             
             time.sleep(1)
             
@@ -70,6 +88,7 @@ def download_all():
 def download_event(event_url, event_data):
     resp = requests.get(event_url)
     text = resp.text.replace('&copy;', '(c)')
+    text = text.replace('\u2019', "'")
     event_hash = hashlib.sha1(text.encode('utf-8')).hexdigest()
     if 'event_data_hash' in event_data and event_data['event_data_hash'] == event_hash:
         return False, None
@@ -86,11 +105,11 @@ def download_event(event_url, event_data):
         if item.name == 'h3':
             output_rows.append([])
             output_rows.append([item.string])
-        elif 'event_races' not in item['class']:
+        elif item.has_attr('class') and 'event_races' not in item['class']:
             time_pos = False
             
             for th in item.find_all('th'):
-                if 'time' in th['class']:
+                if th.has_attr('class') and 'time' in th['class']:
                     time_pos = True
                     if len(output_rows[0]) == 3:
                         output_rows[0].append('Time')
@@ -102,15 +121,17 @@ def download_event(event_url, event_data):
                     
                 for td in tr.find_all('td'):
                     try:
-                        if 'place' in td['class']:
-                            row[0] = td.string
-                        elif 'name' in td['class']:
-                            row[1] = td.string
-                        elif 'team_name' in td['class']:
-                            row[2] = td.string
-                        elif 'time' in td['class']:
-                            row[3] = td.string
+                        if td.has_attr('class'):
+                            if 'place' in td['class']:
+                                row[0] = td.string
+                            elif 'name' in td['class']:
+                                row[1] = td.string
+                            elif 'team_name' in td['class']:
+                                row[2] = td.string
+                            elif 'time' in td['class']:
+                                row[3] = td.string
                     except Exception as e:
+                        print(td)
                         print(row)
                         raise e
                         
@@ -121,12 +142,13 @@ def download_event(event_url, event_data):
     if not os.path.exists(event_data_dir):
         os.mkdir(event_data_dir)
         
-    output_filename = event_data['date'] + '_' + event_data['name'].replace('/', '-').replace('\\', '-') + '.csv'
+    output_filename = strip_bad_utf8_chars(strip_file_chars(event_data['date'] + '_' + event_data['name'])) + '.csv'
+    output_path = os.path.join(event_data_dir, output_filename)
         
     if len(output_rows) < 2:
         return False, None
     
-    with open(os.path.join(event_data_dir, output_filename), 'w',  newline='') as f:
+    with open(output_path, 'w',  newline='') as f:
         wrtr = csv.writer(f)
         wrtr.writerows(output_rows) 
     
