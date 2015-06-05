@@ -3,7 +3,7 @@ Some scripts to download, parse and transform individual race results into
 format readable by road-results
 """
 from bs4 import BeautifulSoup
-from datetime import datetime
+from datetime import datetime, date
 
 import csv
 import hashlib
@@ -13,7 +13,8 @@ import requests
 import time
 
 
-data_dir = os.path.join(os.path.split(__file__)[0], 'data')
+today = date.today()
+data_dir = os.path.join(os.path.split(__file__)[0], 'data-{0}'.format(today.strftime('%Y-%m-%d')))
 
 stop_after = 99999
 
@@ -152,5 +153,5 @@ def download_event(event_url, event_data):
         wrtr = csv.writer(f)
         wrtr.writerows(output_rows) 
     
-    return output_filename, event_city
+    return output_path, event_city
     

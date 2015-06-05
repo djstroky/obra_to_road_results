@@ -10,6 +10,9 @@ import requests
 import time
 
 
+DOWNLOAD_FROM_DATE = datetime(2015, 5, 20)
+
+
 def download():
 	"""download links to all event by year and discipline"""
 
@@ -18,7 +21,7 @@ def download():
 	url_fmt_pre_2006 = 'http://www.obra.org/results/{0}/index.html'
 	base_url_2006_to_present = 'http://obra.org/results/{0}/{1}'
 	
-	data_dir = os.path.join(os.path.split(__file__)[0], 'data')
+	data_dir = os.path.join(os.path.split(__file__)[0], 'data-{0}'.format(today.strftime('%Y-%m-%d')))
 	event_json_filename = os.path.join(data_dir, 'events.json')
 	if not os.path.exists(data_dir):
 		os.makedirs(data_dir)
@@ -30,7 +33,7 @@ def download():
 	else:
 		all_race_data = dict()
 	
-	for year in range(2006, today.year + 1): 
+	for year in range(DOWNLOAD_FROM_DATE.year, today.year + 1): 
 		if year < 2006:
 			# pre-2006 result format
 			
@@ -98,11 +101,15 @@ def parse_2006_to_present_list(year, discipline, resp, all_race_data):
 		if race_tr.has_attr('class') and 'multi-day-event-child' in race_tr['class']:
 			if race_name.find(last_multi_day_name) == -1:
 				race_name = last_multi_day_name + ' - ' + race_name
+				
+		discipline_display_lookup = dict(criterium='Criterium',
+										road='Road Race',
+										time_trial='Time Trial')
 		
-		if race_link not in all_race_data:
+		if race_link not in all_race_data and race_date_dt > DOWNLOAD_FROM_DATE:
 			all_race_data[race_link] = dict(date=race_date_dt.strftime('%Y-%m-%d'),
 											name=race_name,
-											discipline=discipline)
+											discipline=discipline_display_lookup[discipline])
 
 
 def parse_pre_2006_list(year, resp, all_race_data):
@@ -138,7 +145,7 @@ def parse_pre_2006_list(year, resp, all_race_data):
 		else:
 			race_link = race_link_base_url.format(year, item['href'])
 			
-			if race_link not in all_race_data:
+			if race_link not in all_race_data and last_date > DOWNLOAD_FROM_DATE:
 				race_name = item.string
 				
 				race_type = 'unknown'

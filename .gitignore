@@ -64,3 +64,4 @@ target/
 
 #project-level-exclusions
 obra_to_road_results/data
+obra_to_road_results/data-*
