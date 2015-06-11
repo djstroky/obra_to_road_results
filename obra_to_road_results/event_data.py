@@ -46,7 +46,8 @@ def download_all():
         race, ext = os.path.splitext(f)
         processed_files.append(strip_bad_utf8_chars(strip_file_chars(race)))
         
-    downloaded_events = [['name', 'date', 'discipline', 'city', 'filename', 'event_exists_on_road_results']]
+    # downloaded_events = [['name', 'date', 'discipline', 'city', 'filename', 'event_exists_on_road_results']]
+    downloaded_events = []
     
     num_processed = 0
     

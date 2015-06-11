@@ -10,7 +10,7 @@ import requests
 import time
 
 
-DOWNLOAD_FROM_DATE = datetime(2015, 5, 20)
+DOWNLOAD_FROM_DATE = datetime(2015, 6, 1)
 
 
 def download():
